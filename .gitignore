@@ -1,0 +1,13 @@
+# .NET build ciktilari
+app/bin/
+app/obj/
+
+# Installer ciktisi (buyuk exe -> GitHub Release olarak)
+installer/out/
+
+# Proje hafizasi (ozel)
+.claude/
+
+# Muhtelif
+*.user
+Thumbs.db

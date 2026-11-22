@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoodbyeDPI — Minimal Görev Çubuğu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Segoe UI Variable', 'Segoe UI', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Akıcı mikro geçişler */
+    .ease-smooth {
+      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .ease-quick {
+      transition: all 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Sade monokrom masaüstü zeminleri */
+    .stage-dark {
+      background-color: #09090b;
+      background-image:
+        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.04), transparent 58%),
+        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
+      color: #fafafa;
+    }
+
+    .stage-light {
+      background-color: #ededf0;
+      background-image:
+        radial-gradient(circle at 50% 42%, rgba(0, 0, 0, 0.03), transparent 58%),
+        radial-gradient(rgba(0, 0, 0, 0.075) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
+      color: #09090b;
+    }
+
+    /* Monokrom cam / akrilik yüzeyler */
+    .glass-dark {
+      background: rgba(16, 16, 19, 0.84);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow:
+        0 20px 44px -12px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .glass-light {
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      box-shadow:
+        0 20px 44px -12px rgba(0, 0, 0, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    /* Windows 11 alt görev çubuğu */
+    .taskbar-dark {
+      background: rgba(13, 13, 15, 0.85);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .taskbar-light {
+      background: rgba(248, 248, 250, 0.86);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* Aktif ikon kontrast vurgusu */
+    .icon-glow-dark {
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.32));
+    }
+
+    .icon-glow-light {
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.18));
+    }
+
+    /* Flyout açılış/kapanış */
+    .flyout-open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .flyout-closed {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+      pointer-events: none;
+    }
+
+    /* Açma anında hafif tepsi dalgası */
+    @keyframes quickRipple {
+      0% { transform: scale(0.75); opacity: 0.65; }
+      100% { transform: scale(1.7); opacity: 0; }
+    }
+
+    .ripple-active {
+      animation: quickRipple 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+
+<body id="stage" class="stage-dark h-screen w-screen relative flex flex-col justify-between transition-colors duration-300">
+
+  <!-- =========================================================
+   * SAĞ ÜST: SADE KOYU / AÇIK TEMA SEÇİCİ
+   * ========================================================= -->
+  <div class="fixed top-4 right-4 z-30">
+    <div id="themeSwitchWrap" class="glass-dark rounded-full p-1 inline-flex items-center gap-0.5 ease-smooth">
+      <button
+        type="button"
+        data-theme="dark"
+        class="theme-btn px-3 py-1 rounded-full text-xs font-medium ease-quick"
+      >
+        Koyu
+      </button>
+      <button
+        type="button"
+        data-theme="light"
+        class="theme-btn px-3 py-1 rounded-full text-xs font-medium ease-quick"
+      >
+        Açık
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+   * ORTA SAHNE: 3× İKON ÖNİZLEME & STİL SEÇİCİ KARTI
+   * ========================================================= -->
+  <main class="flex-1 w-full flex items-center justify-center px-4 pb-16">
+    <section
+      id="showcaseCard"
+      class="glass-dark w-[340px] max-w-[calc(100vw-2rem)] rounded-3xl p-6 flex flex-col items-center gap-5 ease-smooth"
+      aria-label="GoodbyeDPI İkon Önizlemesi"
+    >
+      <!-- Başlık -->
+      <div class="text-center">
+        <h1 class="text-sm font-semibold tracking-tight">GoodbyeDPI · Görev Çubuğu</h1>
+        <p class="text-xs opacity-50 mt-1">3× ikon görünümü — durum değiştirmek için dokun</p>
+      </div>
+
+      <!-- Yan Yana 3× Açık / Kapalı Önizleme -->
+      <div class="w-full grid grid-cols-2 gap-3">
+        <!-- AÇIK -->
+        <button
+          id="previewOnBtn"
+          type="button"
+          class="rounded-2xl p-3.5 border flex flex-col items-center gap-3 ease-quick cursor-pointer focus:outline-none"
+          aria-label="Açık durumunu seç"
+        >
+          <div class="w-full flex items-center justify-between">
+            <span class="text-[11px] font-medium">Açık</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+          </div>
+          <!-- 3× Büyütülmüş Tepsi Hücresi -->
+          <div id="cellOn" class="w-[82px] h-[72px] rounded-2xl border border-current/10 flex items-center justify-center relative">
+            <div id="iconOn3x" class="w-12 h-12 flex items-center justify-center ease-quick"></div>
+            <span class="w-5 h-[3px] rounded-full bg-current absolute bottom-2"></span>
+          </div>
+          <span class="text-[10.5px] opacity-55">Net · Alt çizgili</span>
+        </button>
+
+        <!-- KAPALI -->
+        <button
+          id="previewOffBtn"
+          type="button"
+          class="rounded-2xl p-3.5 border flex flex-col items-center gap-3 ease-quick cursor-pointer focus:outline-none"
+          aria-label="Kapalı durumunu seç"
+        >
+          <div class="w-full flex items-center justify-between">
+            <span class="text-[11px] font-medium opacity-55">Kapalı</span>
+            <span class="w-1.5 h-1.5 rounded-full border border-current opacity-35"></span>
+          </div>
+          <!-- 3× Büyütülmüş Tepsi Hücresi -->
+          <div id="cellOff" class="w-[82px] h-[72px] rounded-2xl border border-current/10 flex items-center justify-center relative">
+            <div id="iconOff3x" class="w-12 h-12 flex items-center justify-center opacity-35 ease-quick"></div>
+          </div>
+          <span class="text-[10.5px] opacity-45">İnce çizgi · Soluk</span>
+        </button>
+      </div>
+
+      <!-- 3 Minimal İkon Stili Seçici -->
+      <div id="stylePillGroup" class="w-full p-1 rounded-full grid grid-cols-3 gap-1 bg-white/[0.06] ease-smooth">
+        <button type="button" data-style="shield" class="style-btn py-1.5 rounded-full text-xs font-medium ease-quick">
+          Kalkan
+        </button>
+        <button type="button" data-style="capsule" class="style-btn py-1.5 rounded-full text-xs font-medium ease-quick">
+          Kapsül
+        </button>
+        <button type="button" data-style="ring" class="style-btn py-1.5 rounded-full text-xs font-medium ease-quick">
+          Halka
+        </button>
+      </div>
+
+      <!-- Çıkış yapıldığında tek tıkla geri getirme (gizli kalır) -->
+      <button
+        id="restoreTrayBtn"
+        type="button"
+        class="hidden w-full py-2 rounded-full text-xs font-medium ease-quick hover:opacity-90"
+      >
+        Tepsi İkonunu Tekrar Başlat
+      </button>
+    </section>
+  </main>
+
+  <!-- =========================================================
+   * MİNİMAL TOAST BİLDİRİMİ (alert kullanılmaz)
+   * ========================================================= -->
+  <div
+    id="toast"
+    class="fixed bottom-[60px] left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 opacity-0 translate-y-2 pointer-events-none ease-smooth border"
+    role="status"
+    aria-live="polite"
+  >
+    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+    <span id="toastText">GoodbyeDPI Açık</span>
+  </div>
+
+  <!-- =========================================================
+   * ULTRA SADE TEPSİ POPOVER PANELİ (~220px)
+   * Sadece Başlık + Durum Rozeti + Büyük Anahtar + İpucu
+   * ========================================================= -->
+  <section
+    id="flyout"
+    class="glass-dark flyout-open fixed bottom-[56px] right-3 w-[224px] rounded-2xl p-4 z-40 flex flex-col gap-4 ease-smooth"
+    role="dialog"
+    aria-label="GoodbyeDPI Kontrolü"
+  >
+    <!-- Üst Satır: Başlık + Durum Rozeti -->
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-[13.5px] font-semibold tracking-tight">GoodbyeDPI</span>
+      <span
+        id="flyoutBadge"
+        class="px-2 py-0.5 rounded-full text-[10.5px] font-medium ease-quick"
+      >
+        Açık
+      </span>
+    </div>
+
+    <!-- Ana Kontrol: Büyük Taktil Monokrom Aç/Kapa Anahtarı -->
+    <button
+      id="mainSwitch"
+      type="button"
+      role="switch"
+      aria-checked="true"
+      aria-label="GoodbyeDPI Aç veya Kapat"
+      class="w-full h-11 rounded-full p-1 flex items-center justify-between relative cursor-pointer ease-smooth focus:outline-none"
+    >
+      <span
+        id="switchThumb"
+        class="w-9 h-9 rounded-full shadow-sm ease-smooth flex items-center justify-center relative z-10"
+      >
+        <span id="switchThumbDot" class="w-1.5 h-1.5 rounded-full ease-quick"></span>
+      </span>
+      <span
+        id="switchLabel"
+        class="absolute inset-0 flex items-center justify-center text-xs font-semibold tracking-tight pointer-events-none ease-quick"
+      >
+        Açık
+      </span>
+    </button>
+
+    <!-- Alt İpucu -->
+    <p class="text-[10.5px] opacity-45 text-center leading-none">
+      Çift tıkla hızlı aç/kapa
+    </p>
+  </section>
+
+  <!-- =========================================================
+   * SAĞ TIK MİNİMAL BAĞLAM MENÜSÜ (Sadece 2 Öğe)
+   * ========================================================= -->
+  <div
+    id="contextMenu"
+    class="glass-dark hidden fixed z-50 w-[148px] rounded-xl p-1 text-xs flex-col gap-0.5"
+    role="menu"
+    aria-label="GoodbyeDPI Menüsü"
+  >
+    <button
+      id="ctxToggle"
+      type="button"
+      class="w-full px-2.5 py-1.5 rounded-lg text-left font-medium hover:bg-current/10 ease-quick"
+    >
+      Aç / Kapat
+    </button>
+    <div class="my-0.5 h-[1px] bg-current opacity-10"></div>
+    <button
+      id="ctxExit"
+      type="button"
+      class="w-full px-2.5 py-1.5 rounded-lg text-left opacity-70 hover:opacity-100 hover:bg-current/10 ease-quick"
+    >
+      Çıkış
+    </button>
+  </div>
+
+  <!-- =========================================================
+   * WINDOWS 11 MİNİMAL MONOKROM GÖREV ÇUBUĞU (Alt Sabit)
+   * ========================================================= -->
+  <footer
+    id="taskbar"
+    class="taskbar-dark fixed bottom-0 left-0 right-0 h-[48px] z-40 px-3 flex items-center justify-between ease-smooth"
+    role="navigation"
+    aria-label="Windows 11 Görev Çubuğu"
+  >
+    <!-- Sol Denge Boşluğu -->
+    <div class="hidden sm:block w-24"></div>
+
+    <!-- Merkez: Minimal Windows 11 Uygulama İkonları -->
+    <div class="flex items-center gap-1 mx-auto">
+      <button type="button" class="w-9 h-9 rounded-lg flex items-center justify-center opacity-80 hover:opacity-100 hover:bg-current/[0.08] ease-quick" aria-label="Başlat">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3" y="3" width="8.3" height="8.3" rx="1.2" />
+          <rect x="12.7" y="3" width="8.3" height="8.3" rx="1.2" />
+          <rect x="3" y="12.7" width="8.3" height="8.3" rx="1.2" />
+          <rect x="12.7" y="12.7" width="8.3" height="8.3" rx="1.2" />
+        </svg>
+      </button>
+      <button type="button" class="w-9 h-9 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-current/[0.08] ease-quick" aria-label="Ara">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="20" y1="20" x2="16.2" y2="16.2" />
+        </svg>
+      </button>
+      <button type="button" class="w-9 h-9 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-current/[0.08] ease-quick" aria-label="Dosyalar">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Sağ: Sistem Tepsisi (GoodbyeDPI + Wi-Fi + Ses + Canlı Saat) -->
+    <div class="flex items-center gap-0.5 sm:gap-1">
+      <!-- Gizli Simgeler Oku -->
+      <button type="button" class="w-7 h-8 rounded-md flex items-center justify-center opacity-45 hover:opacity-100 hover:bg-current/[0.08] ease-quick" aria-label="Gizli simgeler">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      </button>
+
+      <!-- ★ GOODBYEDPI CANLI TEPSİ İKONU ★ -->
+      <div id="trayIconWrap" class="relative flex items-center justify-center">
+        <!-- Hover Tooltip -->
+        <div
+          id="trayTooltip"
+          class="glass-dark pointer-events-none opacity-0 translate-y-1 ease-quick absolute bottom-[44px] right-0 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-medium z-50"
+        >
+          GoodbyeDPI · Açık
+        </div>
+
+        <button
+          id="trayBtn"
+          type="button"
+          class="relative w-9 h-9 rounded-lg flex items-center justify-center hover:bg-current/[0.1] ease-quick focus:outline-none"
+          aria-label="GoodbyeDPI Sistem Tepsisi"
+        >
+          <!-- Açılma dalgası -->
+          <span id="trayRipple" class="pointer-events-none absolute inset-1.5 rounded-full border border-current opacity-0"></span>
+          <!-- İkon -->
+          <span id="trayIconSlot" class="w-[18px] h-[18px] flex items-center justify-center ease-quick"></span>
+          <!-- Aktif Alt Çizgi -->
+          <span
+            id="trayIndicator"
+            class="absolute bottom-[3px] h-[2.5px] rounded-full bg-current ease-smooth"
+            style="width: 14px; opacity: 0.95;"
+          ></span>
+        </button>
+      </div>
+
+      <!-- Wi-Fi ve Ses -->
+      <div class="hidden sm:flex items-center gap-2 px-2 h-8 rounded-md opacity-70 hover:opacity-100 hover:bg-current/[0.08] ease-quick cursor-default">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+          <line x1="12" y1="20" x2="12.01" y2="20" />
+        </svg>
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        </svg>
+      </div>
+
+      <!-- Canlı Saat & Tarih (TR) -->
+      <div class="px-2 py-0.5 rounded-md hover:bg-current/[0.08] ease-quick text-right leading-tight cursor-default tabular-nums">
+        <div id="clockTime" class="text-[11.5px] font-medium">12:23</div>
+        <div id="clockDate" class="text-[10px] opacity-60">22.11.2026</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* =========================================================
+       * 1. UYGULAMA DURUMU
+       * ========================================================= */
+      const state = {
+        theme: 'dark',     // 'dark' | 'light'
+        style: 'shield',   // 'shield' | 'capsule' | 'ring'
+        isOn: true,        // true (Açık) | false (Kapalı)
+        flyoutOpen: true,  // popover görünürlüğü
+        hidden: false,     // sağ tık -> Çıkış durumu
+      };
+
+      /* =========================================================
+       * 2. DOM REFERANSLARI
+       * ========================================================= */
+      const stage = document.getElementById('stage');
+      const themeSwitchWrap = document.getElementById('themeSwitchWrap');
+      const showcaseCard = document.getElementById('showcaseCard');
+      const stylePillGroup = document.getElementById('stylePillGroup');
+      const previewOnBtn = document.getElementById('previewOnBtn');
+      const previewOffBtn = document.getElementById('previewOffBtn');
+      const cellOn = document.getElementById('cellOn');
+      const cellOff = document.getElementById('cellOff');
+      const iconOn3x = document.getElementById('iconOn3x');
+      const iconOff3x = document.getElementById('iconOff3x');
+      const restoreTrayBtn = document.getElementById('restoreTrayBtn');
+
+      const flyout = document.getElementById('flyout');
+      const flyoutBadge = document.getElementById('flyoutBadge');
+      const mainSwitch = document.getElementById('mainSwitch');
+      const switchThumb = document.getElementById('switchThumb');
+      const switchThumbDot = document.getElementById('switchThumbDot');
+      const switchLabel = document.getElementById('switchLabel');
+
+      const taskbar = document.getElementById('taskbar');
+      const trayIconWrap = document.getElementById('trayIconWrap');
+      const trayBtn = document.getElementById('trayBtn');
+      const trayIconSlot = document.getElementById('trayIconSlot');
+      const trayIndicator = document.getElementById('trayIndicator');
+      const trayRipple = document.getElementById('trayRipple');
+      const trayTooltip = document.getElementById('trayTooltip');
+
+      const contextMenu = document.getElementById('contextMenu');
+      const ctxToggle = document.getElementById('ctxToggle');
+      const ctxExit = document.getElementById('ctxExit');
+
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      const clockTime = document.getElementById('clockTime');
+      const clockDate = document.getElementById('clockDate');
+
+      /* =========================================================
+       * 3. 3 MİNİMAL MONOKROM İKON STİLİ (AÇIK: DOLGULU, KAPALI: İNCE ÇİZGİ)
+       * ========================================================= */
+      function getIconSvg(style, isOn) {
+        const innerCut = state.theme === 'dark' ? '#0b0b0e' : '#ffffff';
+
+        // 1. Kalkan: Minimal geometrik kalkan
+        if (style === 'shield') {
+          if (isOn) {
+            return `
+              <svg class="w-full h-full" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2.4L4.5 5.6V11.3C4.5 16.2 7.7 20.4 12 21.7C16.3 20.4 19.5 16.2 19.5 11.3V5.6L12 2.4Z" fill="currentColor" />
+                <circle cx="12" cy="11.5" r="2.2" fill="${innerCut}" />
+              </svg>`;
+          }
+          return `
+            <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.8L4.9 5.8V11.2C4.9 15.8 7.9 19.8 12 21.1C16.1 19.8 19.1 15.8 19.1 11.2V5.8L12 2.8Z" />
+            </svg>`;
+        }
+
+        // 2. Kapsül: Minimal anahtar / nokta kapsülü
+        if (style === 'capsule') {
+          if (isOn) {
+            return `
+              <svg class="w-full h-full" viewBox="0 0 24 24" fill="none">
+                <rect x="2.2" y="6.6" width="19.6" height="10.8" rx="5.4" fill="currentColor" />
+                <circle cx="16.4" cy="12" r="3.1" fill="${innerCut}" />
+              </svg>`;
+          }
+          return `
+            <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+              <rect x="2.8" y="7.1" width="18.4" height="9.8" rx="4.9" />
+              <circle cx="7.8" cy="12" r="2.3" />
+            </svg>`;
+        }
+
+        // 3. Halka: Minimal güç halkası / merkez nokta
+        if (isOn) {
+          return `
+            <svg class="w-full h-full" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="8.4" stroke="currentColor" stroke-width="2.4" />
+              <circle cx="12" cy="12" r="3.6" fill="currentColor" />
+            </svg>`;
+        }
+        return `
+          <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="12" cy="12" r="8.4" />
+          </svg>`;
+      }
+
+      /* =========================================================
+       * 4. CANLI TÜRKÇE SAAT VE TOAST
+       * ========================================================= */
+      function updateClock() {
+        const now = new Date();
+        clockTime.textContent = now.toLocaleTimeString('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        clockDate.textContent = now.toLocaleDateString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      function showToast(msg) {
+        const dark = state.theme === 'dark';
+        toastText.textContent = msg;
+        toast.className = `fixed bottom-[60px] left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 pointer-events-none ease-smooth border ${
+          dark
+            ? 'bg-zinc-950/92 text-white border-white/15 shadow-xl'
+            : 'bg-white/95 text-zinc-950 border-black/10 shadow-lg'
+        }`;
+        requestAnimationFrame(() => {
+          toast.style.opacity = '1';
+          toast.style.transform = 'translate(-50%, 0)';
+        });
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translate(-50%, 8px)';
+        }, 1800);
+      }
+
+      function triggerRipple() {
+        trayRipple.classList.remove('ripple-active');
+        void trayRipple.offsetWidth;
+        trayRipple.classList.add('ripple-active');
+      }
+
+      /* =========================================================
+       * 5. DURUM AKSİYONLARI
+       * ========================================================= */
+      function setDpiState(nextOn, notify = false) {
+        if (state.hidden) {
+          state.hidden = false;
+        }
+        state.isOn = nextOn;
+        if (nextOn) triggerRipple();
+        if (notify) {
+          showToast(nextOn ? 'GoodbyeDPI Açık' : 'GoodbyeDPI Kapalı');
+        }
+        render();
+      }
+
+      function closeContextMenu() {
+        contextMenu.classList.add('hidden');
+        contextMenu.classList.remove('flex');
+      }
+
+      /* =========================================================
+       * 6. ARAYÜZ GÜNCELLEME (RENDER)
+       * ========================================================= */
+      function render() {
+        const dark = state.theme === 'dark';
+
+        // 1. Zemin ve cam yüzey teması
+        stage.classList.toggle('stage-dark', dark);
+        stage.classList.toggle('stage-light', !dark);
+
+        const addGlass = dark ? 'glass-dark' : 'glass-light';
+        const remGlass = dark ? 'glass-light' : 'glass-dark';
+        [themeSwitchWrap, showcaseCard, flyout, contextMenu, trayTooltip].forEach((el) => {
+          el.classList.add(addGlass);
+          el.classList.remove(remGlass);
+        });
+
+        taskbar.classList.toggle('taskbar-dark', dark);
+        taskbar.classList.toggle('taskbar-light', !dark);
+
+        // Sağ üst tema butonları
+        document.querySelectorAll('.theme-btn').forEach((btn) => {
+          const active = btn.dataset.theme === state.theme;
+          btn.className = 'theme-btn px-3 py-1 rounded-full text-xs font-medium ease-quick ' + (
+            active
+              ? dark ? 'bg-white text-black' : 'bg-zinc-950 text-white'
+              : dark ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-black'
+          );
+        });
+
+        // 2. Orta kart 3× önizlemeler
+        iconOn3x.innerHTML = getIconSvg(state.style, true);
+        iconOff3x.innerHTML = getIconSvg(state.style, false);
+        iconOn3x.classList.toggle('icon-glow-dark', dark);
+        iconOn3x.classList.toggle('icon-glow-light', !dark);
+
+        const cellBg = dark ? 'rgba(0, 0, 0, 0.42)' : 'rgba(255, 255, 255, 0.72)';
+        cellOn.style.background = cellBg;
+        cellOff.style.background = cellBg;
+
+        const styleTile = (el, active) => {
+          el.style.borderColor = active
+            ? dark ? 'rgba(255, 255, 255, 0.32)' : 'rgba(0, 0, 0, 0.28)'
+            : dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+          el.style.background = active
+            ? dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.045)'
+            : 'transparent';
+        };
+        styleTile(previewOnBtn, state.isOn && !state.hidden);
+        styleTile(previewOffBtn, !state.isOn && !state.hidden);
+
+        // Stil seçici (Kalkan / Kapsül / Halka)
+        stylePillGroup.style.background = dark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.055)';
+        document.querySelectorAll('.style-btn').forEach((btn) => {
+          const active = btn.dataset.style === state.style;
+          btn.className = 'style-btn py-1.5 rounded-full text-xs font-medium ease-quick ' + (
+            active
+              ? dark ? 'bg-white text-black shadow-sm' : 'bg-zinc-950 text-white shadow-sm'
+              : dark ? 'text-zinc-400 hover:text-white' : 'text-zinc-600 hover:text-black'
+          );
+        });
+
+        // Çıkış yapıldıysa geri getirme butonu
+        restoreTrayBtn.classList.toggle('hidden', !state.hidden);
+        restoreTrayBtn.className = `${state.hidden ? '' : 'hidden '}w-full py-2 rounded-full text-xs font-medium ease-quick hover:opacity-90 ${
+          dark ? 'bg-white text-black' : 'bg-zinc-950 text-white'
+        }`;
+
+        // 3. Görev çubuğu canlı tepsi ikonu
+        trayIconWrap.style.display = state.hidden ? 'none' : 'flex';
+        trayIconSlot.innerHTML = getIconSvg(state.style, state.isOn);
+        trayIconSlot.style.opacity = state.isOn ? '1' : '0.35';
+        trayIconSlot.classList.toggle('icon-glow-dark', state.isOn && dark);
+        trayIconSlot.classList.toggle('icon-glow-light', state.isOn && !dark);
+
+        if (state.isOn) {
+          trayIndicator.style.width = state.flyoutOpen ? '15px' : '11px';
+          trayIndicator.style.opacity = '0.95';
+        } else {
+          trayIndicator.style.width = '0px';
+          trayIndicator.style.opacity = '0';
+        }
+
+        trayTooltip.textContent = state.isOn ? 'GoodbyeDPI · Açık' : 'GoodbyeDPI · Kapalı';
+
+        // 4. Ultra sade Flyout Popover
+        const showFlyout = state.flyoutOpen && !state.hidden;
+        flyout.classList.toggle('flyout-open', showFlyout);
+        flyout.classList.toggle('flyout-closed', !showFlyout);
+
+        flyoutBadge.textContent = state.isOn ? 'Açık' : 'Kapalı';
+        flyoutBadge.className = 'px-2 py-0.5 rounded-full text-[10.5px] font-medium ease-quick ' + (
+          state.isOn
+            ? dark ? 'bg-white text-black' : 'bg-zinc-950 text-white'
+            : dark ? 'bg-white/10 text-zinc-400' : 'bg-black/10 text-zinc-500'
+        );
+
+        // Büyük taktil aç/kapa anahtarı
+        mainSwitch.setAttribute('aria-checked', String(state.isOn));
+        if (state.isOn) {
+          mainSwitch.style.background = dark ? '#ffffff' : '#09090b';
+          switchThumb.style.background = dark ? '#09090b' : '#ffffff';
+          switchThumb.style.transform = 'translateX(148px)';
+          switchThumbDot.style.background = dark ? '#ffffff' : '#09090b';
+          switchLabel.textContent = 'Açık';
+          switchLabel.style.color = dark ? '#09090b' : '#ffffff';
+          switchLabel.style.paddingRight = '32px';
+          switchLabel.style.paddingLeft = '0px';
+        } else {
+          mainSwitch.style.background = dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.11)';
+          switchThumb.style.background = dark ? '#e4e4e7' : '#ffffff';
+          switchThumb.style.transform = 'translateX(0px)';
+          switchThumbDot.style.background = dark ? 'rgba(9, 9, 11, 0.35)' : 'rgba(9, 9, 11, 0.3)';
+          switchLabel.textContent = 'Kapalı';
+          switchLabel.style.color = dark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(9, 9, 11, 0.6)';
+          switchLabel.style.paddingLeft = '32px';
+          switchLabel.style.paddingRight = '0px';
+        }
+      }
+
+      /* =========================================================
+       * 7. ETKİLEŞİMLER (SOL TIK, ÇİFT TIK, SAĞ TIK)
+       * ========================================================= */
+      // Tema geçişi
+      document.querySelectorAll('.theme-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.theme = btn.dataset.theme;
+          render();
+        });
+      });
+
+      // İkon stili geçişi
+      document.querySelectorAll('.style-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.style = btn.dataset.style;
+          render();
+        });
+      });
+
+      // Orta kart Açık / Kapalı tıklamaları (canlı durumu günceller)
+      previewOnBtn.addEventListener('click', () => {
+        setDpiState(!state.isOn ? true : false, true);
+      });
+
+      previewOffBtn.addEventListener('click', () => {
+        setDpiState(state.isOn ? false : true, true);
+      });
+
+      // Popover büyük anahtar
+      mainSwitch.addEventListener('click', () => {
+        setDpiState(!state.isOn, false);
+      });
+
+      // Çıkış sonrası geri getirme
+      restoreTrayBtn.addEventListener('click', () => {
+        state.hidden = false;
+        state.isOn = true;
+        state.flyoutOpen = true;
+        triggerRipple();
+        showToast('GoodbyeDPI başlatıldı');
+        render();
+      });
+
+      // Tepsi hover tooltip
+      trayBtn.addEventListener('mouseenter', () => {
+        if (!state.flyoutOpen && contextMenu.classList.contains('hidden')) {
+          trayTooltip.style.opacity = '1';
+          trayTooltip.style.transform = 'translateY(0)';
+        }
+      });
+
+      trayBtn.addEventListener('mouseleave', () => {
+        trayTooltip.style.opacity = '0';
+        trayTooltip.style.transform = 'translateY(4px)';
+      });
+
+      // Tepsi Sol Tık (Popover Aç/Kapat) ve Çift Tık (Anında Aç/Kapat)
+      let clickTimeout = null;
+      trayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeContextMenu();
+        trayTooltip.style.opacity = '0';
+
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
+          setDpiState(!state.isOn, true);
+        } else {
+          clickTimeout = setTimeout(() => {
+            clickTimeout = null;
+            state.flyoutOpen = !state.flyoutOpen;
+            render();
+          }, 210);
+        }
+      });
+
+      // Tepsi Sağ Tık: 2 öğeli minimal bağlam menüsü
+      trayBtn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        trayTooltip.style.opacity = '0';
+        state.flyoutOpen = false;
+        render();
+
+        const rect = trayBtn.getBoundingClientRect();
+        const menuW = 148;
+        const left = Math.min(window.innerWidth - menuW - 12, Math.max(12, rect.right - menuW));
+        contextMenu.style.left = `${left}px`;
+        contextMenu.style.bottom = '56px';
+        contextMenu.classList.remove('hidden');
+        contextMenu.classList.add('flex');
+      });
+
+      ctxToggle.addEventListener('click', () => {
+        closeContextMenu();
+        setDpiState(!state.isOn, true);
+      });
+
+      ctxExit.addEventListener('click', () => {
+        closeContextMenu();
+        state.isOn = false;
+        state.flyoutOpen = false;
+        state.hidden = true;
+        showToast('GoodbyeDPI kapatıldı');
+        render();
+      });
+
+      // Dışarı tıklayınca veya ESC ile menüyü kapat
+      document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) closeContextMenu();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeContextMenu();
+          if (state.flyoutOpen) {
+            state.flyoutOpen = false;
+            render();
+          }
+        }
+      });
+
+      // İlk çizim
+      render();
+    })();
+  </script>
+</body>
+</html>
