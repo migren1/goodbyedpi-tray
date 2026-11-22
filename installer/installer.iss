@@ -45,7 +45,7 @@ Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: startup
 
 [Run]
 ; Kurulum sonu: uygulamayi baslat
-Filename: "{app}\{#AppExe}"; Description: "GoodbyeDPI'yi şimdi başlat"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "GoodbyeDPI'yi şimdi başlat"; Flags: nowait postinstall skipifsilent shellexec
 
 [UninstallRun]
 ; Kaldirmadan once goodbyedpi'yi durdur
