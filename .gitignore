@@ -1,6 +1,7 @@
 # .NET build ciktilari
 app/bin/
 app/obj/
+app/testbuild*/
 
 # Installer ciktisi (buyuk exe -> GitHub Release olarak)
 installer/out/

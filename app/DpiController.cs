@@ -5,6 +5,8 @@ namespace GoodbyeDpiTray;
 
 /// <summary>
 /// goodbyedpi.exe'yi gizli (pencere yok) baslatir/durdurur.
+/// Tespit ISIMLE DEGIL TAM YOLLA yapilir: tray exe'si de "GoodbyeDPI" adli
+/// oldugundan isim-bazli arama (buyuk/kucuk harf duyarsiz) trayi backend saniyordu.
 /// </summary>
 public sealed class DpiController
 {
@@ -24,7 +26,6 @@ public sealed class DpiController
     private static string ResolveExe()
     {
         string baseDir = AppContext.BaseDirectory;
-        // Kurulumda: <app>\goodbyedpi\x86_64\goodbyedpi.exe
         string[] candidates =
         {
             Path.Combine(baseDir, "goodbyedpi", "x86_64", "goodbyedpi.exe"),
@@ -33,18 +34,37 @@ public sealed class DpiController
         };
         foreach (var c in candidates)
             if (File.Exists(c)) return c;
-        return candidates[0]; // bulunamazsa ilk aday (hata mesaji icin)
+        return candidates[0];
+    }
+
+    /// <summary>Yalnizca GERCEK goodbyedpi backend'ini bulur (tam yol esitligi, kendini haric).</summary>
+    private Process? FindBackend()
+    {
+        int self = Environment.ProcessId;
+        foreach (var p in Process.GetProcessesByName("goodbyedpi"))
+        {
+            if (p.Id == self) continue;
+            try
+            {
+                if (string.Equals(p.MainModule?.FileName, ExePath, StringComparison.OrdinalIgnoreCase))
+                    return p;
+            }
+            catch
+            {
+                // MainModule okunamadi: adi "goodbyedpi" (tam kucuk) ise backend'dir;
+                // tray exe'si "GoodbyeDPI" adli oldugundan bu ayirt eder.
+                if (p.ProcessName == "goodbyedpi") return p;
+            }
+        }
+        return null;
     }
 
     public bool IsRunning()
     {
         if (_proc is { HasExited: false }) return true;
-        var found = Process.GetProcessesByName("goodbyedpi");
-        if (found.Length > 0)
-        {
-            _proc = found[0];
-            return true;
-        }
+        var p = FindBackend();
+        if (p != null) { _proc = p; return true; }
+        _proc = null;
         return false;
     }
 
@@ -68,9 +88,11 @@ public sealed class DpiController
 
     public void Stop()
     {
-        foreach (var p in Process.GetProcessesByName("goodbyedpi"))
+        // Sadece gercek backend'i oldur (tray'e dokunma).
+        Process? p;
+        while ((p = FindBackend()) != null)
         {
-            try { p.Kill(true); p.WaitForExit(2000); } catch { /* yok say */ }
+            try { p.Kill(true); p.WaitForExit(2000); } catch { break; }
         }
         _proc = null;
     }

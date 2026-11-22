@@ -13,8 +13,8 @@
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Ideal">
 
-  <Border x:Name="Panel" CornerRadius="12" Padding="16">
-    <StackPanel Width="208">
+  <Border x:Name="Panel" CornerRadius="12" Padding="13">
+    <StackPanel Width="158">
 
       <!-- Baslik + durum rozeti -->
       <Grid Margin="2,0,2,14">
@@ -28,12 +28,12 @@
       </Grid>
 
       <!-- Buyuk ac/kapa anahtari -->
-      <Border x:Name="Track" Height="44" CornerRadius="22" Cursor="Hand"
+      <Border x:Name="Track" Height="40" CornerRadius="20" Cursor="Hand"
               MouseLeftButtonUp="OnTrackClick">
         <Grid>
-          <TextBlock x:Name="SwitchLabel" FontSize="12.5" FontWeight="SemiBold"
+          <TextBlock x:Name="SwitchLabel" FontSize="12" FontWeight="SemiBold"
                      HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
-          <Border x:Name="Thumb" Width="36" Height="36" CornerRadius="18"
+          <Border x:Name="Thumb" Width="32" Height="32" CornerRadius="16"
                   HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0"
                   IsHitTestVisible="False">
             <Border.RenderTransform>

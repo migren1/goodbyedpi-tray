@@ -31,26 +31,41 @@ public partial class FlyoutWindow : Window
         Dwm.Apply(hwnd, _dark);
     }
 
-    public void ShowAt(bool on, bool dark)
+    private int _anchorPx;
+
+    public void ShowAt(bool on, bool dark, int anchorPx)
     {
         _dark = dark;
+        _anchorPx = anchorPx;
         Render(on, animate: false);
         ApplyBackdrop();
 
-        // Olcu hazir olsun
-        Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        // Gecici konum (sag-alt); gosterince ikon hizasina tasinir
         var wa = SystemParameters.WorkArea;
-        Left = wa.Right - Width - 12;
-        Top = wa.Bottom - Height - 12;
-        if (double.IsNaN(Width))
-        {
-            Left = wa.Right - 248;
-            Top = wa.Bottom - 170;
-        }
+        Left = wa.Right - 196;
+        Top = wa.Bottom - 158;
 
         Show();
         Activate();
         Topmost = true;
+        Reposition();
+    }
+
+    /// <summary>Paneli tiklanan ikonun yatay hizasina, gorev cubugunun ustune koyar.</summary>
+    private void Reposition()
+    {
+        var src = PresentationSource.FromVisual(this);
+        double pxToDip = src?.CompositionTarget.TransformFromDevice.M11 ?? 1.0;
+        double anchorDip = _anchorPx * pxToDip;
+
+        var wa = SystemParameters.WorkArea;
+        double w = ActualWidth, h = ActualHeight;
+        double left = anchorDip - w / 2;      // ikon altinda ortala
+        double top = wa.Bottom - h - 8;        // gorev cubugu ustu
+
+        left = Math.Max(wa.Left + 4, Math.Min(left, wa.Right - w - 4));
+        Left = left;
+        Top = top;
     }
 
     private void OnTrackClick(object sender, MouseButtonEventArgs e)
@@ -107,8 +122,8 @@ public partial class FlyoutWindow : Window
             SwitchLabel.Foreground = new SolidColorBrush(Color.FromArgb(0xA6, ink.R, ink.G, ink.B));
         }
 
-        // Thumb konumu (0 <-> 164)
-        double target = on ? 164 : 0;
+        // Thumb konumu (0 <-> 118): izlek 158, thumb 32, kenar 4
+        double target = on ? 118 : 0;
         if (animate)
         {
             var anim = new DoubleAnimation(target, TimeSpan.FromMilliseconds(220))

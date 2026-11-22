@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using WF = System.Windows.Forms;
 using Drawing = System.Drawing;
@@ -10,53 +11,53 @@ public partial class App : System.Windows.Application
     private Drawing.Icon? _icon;
     private readonly DpiController _dpi = new();
     private FlyoutWindow? _flyout;
-    private WF.Timer? _clickTimer;
+
+    private static readonly string LogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "GoodbyeDPI", "gbdpi.log");
+
+    internal static void Log(string s)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+            File.AppendAllText(LogPath, DateTime.Now.ToString("HH:mm:ss ") + s + "\r\n");
+        }
+        catch { /* yok say */ }
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        _tray = new WF.NotifyIcon
-        {
-            Visible = true,
-            Text = "GoodbyeDPI"
-        };
+        AppDomain.CurrentDomain.UnhandledException += (_, ev) => Log("UNHANDLED: " + ev.ExceptionObject);
+        DispatcherUnhandledException += (_, ev) => { Log("DISPATCHER: " + ev.Exception); ev.Handled = true; };
+
+        Log("=== baslangic === exe=" + _dpi.ExePath + " var=" + File.Exists(_dpi.ExePath));
+
+        _tray = new WF.NotifyIcon { Visible = true, Text = "GoodbyeDPI" };
 
         var menu = new WF.ContextMenuStrip();
         var miToggle = new WF.ToolStripMenuItem("Aç / Kapat", null, (_, _) => Toggle());
+        var miPanel = new WF.ToolStripMenuItem("Panel", null, (_, _) => ShowFlyout());
         var miExit = new WF.ToolStripMenuItem("Çıkış", null, (_, _) => ExitApp());
         menu.Items.Add(miToggle);
+        menu.Items.Add(miPanel);
         menu.Items.Add(new WF.ToolStripSeparator());
         menu.Items.Add(miExit);
-        menu.Opening += (_, _) =>
-            miToggle.Text = _dpi.IsRunning() ? "Kapat" : "Aç";
+        menu.Opening += (_, _) => miToggle.Text = _dpi.IsRunning() ? "Kapat" : "Aç";
         _tray.ContextMenuStrip = menu;
 
-        // Tek tik = flyout, cift tik = hizli ac/kapa
-        _clickTimer = new WF.Timer { Interval = 250 };
-        _clickTimer.Tick += (_, _) => { _clickTimer!.Stop(); ToggleFlyout(); };
-
+        // Sol tik = PANEL (HUD) ac/kapa. Ac/kapa icin sag tik menu ya da paneldeki anahtar.
         _tray.MouseClick += (_, ev) =>
         {
-            if (ev.Button == WF.MouseButtons.Left)
-            {
-                if (_clickTimer!.Enabled) return; // cift tik bekliyor
-                _clickTimer.Start();
-            }
-        };
-        _tray.MouseDoubleClick += (_, ev) =>
-        {
-            if (ev.Button == WF.MouseButtons.Left)
-            {
-                _clickTimer!.Stop();
-                Toggle();
-            }
+            Log("MouseClick " + ev.Button);
+            if (ev.Button == WF.MouseButtons.Left) ShowFlyout();
         };
 
         RefreshIcon();
+        Log("hazir (tray gorunur)");
     }
-
-    private bool Dark => Dwm.IsSystemDark();
 
     private void RefreshIcon()
     {
@@ -72,29 +73,33 @@ public partial class App : System.Windows.Application
     {
         try
         {
+            Log("Toggle basladi, suan calisiyor=" + _dpi.IsRunning());
             bool nowOn = _dpi.Toggle();
             RefreshIcon();
             _flyout?.Render(nowOn);
-            _tray.ShowBalloonTip(1200, "GoodbyeDPI",
+            Log("Toggle bitti, yeni durum=" + nowOn);
+            _tray.ShowBalloonTip(1000, "GoodbyeDPI",
                 nowOn ? "Açıldı" : "Kapatıldı", WF.ToolTipIcon.Info);
         }
         catch (Exception ex)
         {
-            _tray.ShowBalloonTip(3000, "GoodbyeDPI", "Hata: " + ex.Message, WF.ToolTipIcon.Error);
+            Log("Toggle HATA: " + ex);
+            _tray.ShowBalloonTip(4000, "GoodbyeDPI", "Hata: " + ex.Message, WF.ToolTipIcon.Error);
         }
     }
 
-    private void ToggleFlyout()
+    private bool Dark => Dwm.IsSystemDark();
+
+    private void ShowFlyout()
     {
-        _flyout ??= CreateFlyout();
-        if (_flyout.IsVisible)
+        try
         {
-            _flyout.Hide();
+            int anchorX = WF.Cursor.Position.X; // tiklanan/imlec konumu (ikon hizasi)
+            _flyout ??= CreateFlyout();
+            if (_flyout.IsVisible) _flyout.Hide();
+            else _flyout.ShowAt(_dpi.IsRunning(), Dark, anchorX);
         }
-        else
-        {
-            _flyout.ShowAt(_dpi.IsRunning(), Dark);
-        }
+        catch (Exception ex) { Log("ShowFlyout HATA: " + ex); }
     }
 
     private FlyoutWindow CreateFlyout()
